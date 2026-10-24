@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PWA Hesaplama Testi</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; max-width: 500px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .result { font-size: 1.2rem; font-weight: bold; color: #0078d4; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>PWA Veri Giriş Denemesi</h2>
+        <label>Miktar (Adet):</label>
+        <input type="number" id="miktar" value="0" oninput="hesapla()">
+        
+        <label>Birim Fiyat (TL):</label>
+        <input type="number" id="fiyat" value="0" oninput="hesapla()">
+
+        <!-- Power Query / Excel formül mantığının JavaScript ile anlık çalışacağı yer -->
+        <div class="result">Toplam Tutar: <span id="toplam">0</span> TL</div>
+    </div>
+
+    <script>
+        // PWA'yı tarayıcıya kaydetme kodu (Service Worker Aktivasyonu)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+
+        // Excel / Power Query mantığını simüle eden JavaScript fonksiyonu
+        function hesapla() {
+            let miktar = parseFloat(document.getElementById('miktar').value) || 0;
+            let fiyat = parseFloat(document.getElementById('fiyat').value) || 0;
+            
+            // Excel'deki =Miktar * Fiyat formülü
+            let toplam = miktar * fiyat; 
+            
+            // Şartlı filtreleme mantığı (Örn: 1000 TL üzeri kargo bedava veya ekstra vergi gibi)
+            if (toplam > 1000) {
+                toplam = toplam * 0.9; // %10 indirim uygula (Power Query Conditional Column gibi)
+                document.getElementById('toplam').innerText = toplam.toFixed(2) + " (%10 İndirim Uygulandı)";
+            } else {
+                document.getElementById('toplam').innerText = toplam.toFixed(2);
+            }
+        }
+    </script>
+</body>
+</html>
