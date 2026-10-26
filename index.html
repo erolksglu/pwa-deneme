@@ -3,49 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PWA Hesaplama Testi</title>
+    <title>Kurumsal PWA Sistemi</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f9; max-width: 500px; margin: auto; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        input { width: 100%; padding: 10px; margin: 10px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        .result { font-size: 1.2rem; font-weight: bold; color: #0078d4; margin-top: 15px; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; background: #f0f2f5; max-width: 800px; margin: auto; }
+        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .page { display: none; }
+        .active { display: block; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+        button { background: #0078d4; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #005a9e; }
+        .nav-tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .nav-tabs button { background: #e1dfdd; color: #323130; }
+        .nav-tabs button.active-tab { background: #0078d4; color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background: #f3f2f1; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>PWA Veri Giriş Denemesi</h2>
-        <label>Miktar (Adet):</label>
-        <input type="number" id="miktar" value="0" oninput="hesapla()">
-        
-        <label>Birim Fiyat (TL):</label>
-        <input type="number" id="fiyat" value="0" oninput="hesapla()">
 
-        <!-- Power Query / Excel formül mantığının JavaScript ile anlık çalışacağı yer -->
-        <div class="result">Toplam Tutar: <span id="toplam">0</span> TL</div>
+    <!-- 1. SAYFA: ŞİFRE GİRİŞ EKRANI -->
+    <div id="loginPage" class="box page active">
+        <h2>Kullanıcı Girişi</h2>
+        <p>Lütfen devam etmek için sistem şifresini giriniz:</p>
+        <input type="password" id="sysPassword" placeholder="Şifre">
+        <button onclick="login Kontrol()">Giriş Yap</button>
+        <p id="loginError" style="color:red; display:none;">Hatalı Şifre! Tekrar deneyin.</p>
+    </div>
+
+    <!-- ANA UYGULAMA ALANI (Giriş Yapılınca Açılır) -->
+    <div id="mainApp" style="display: none;">
+        
+        <!-- Sayfa Menü Sekmeleri -->
+        <div class="nav-tabs">
+            <button id="tab1" class="active-tab" onclick="switchPage('dataEntryPage', 'tab1')">Veri Giriş Ekranı</button>
+            <button id="tab2" onclick="switchPage('dataViewPage', 'tab2')">Excel Rapor Sayfası</button>
+        </div>
+
+        <!-- 2. SAYFA: VERİ GİRİŞ VE HESAPLAMA -->
+        <div id="dataEntryPage" class="box page active">
+            <h3>Hesaplama ve Veri Girişi</h3>
+            <label>Miktar:</label>
+            <input type="number" id="miktar" value="0" oninput="hesapla()">
+            
+            <label>Birim Fiyat (TL):</label>
+            <input type="number" id="fiyat" value="0" oninput="hesapla()">
+
+            <h4 style="color:#0078d4;">Anlık Toplam: <span id="toplam">0.00</span> TL</h4>
+            <button onclick="veriyiBulutaGonder()">Veriyi Google Excel'e Kaydet</button>
+        </div>
+
+        <!-- 3. SAYFA: EXCEL BENZERİ TABLO GÖRÜNÜMÜ -->
+        <div id="dataViewPage" class="box page">
+            <h3>Ortak Bulut Veritabanı Tablosu</h3>
+            <button style="background:#107c41;" onclick="buluttanVeriCek()">Tabloyu Güncelle / Yenile</button>
+            <div style="overflow-x:auto;">
+                <table>
+                    <thead>
+                        <tr><th>Kayıt Tarihi</th><th>Miktar</th><th>Fiyat</th><th>Toplam Tutar</th></tr>
+                    </thead>
+                    <tbody id="excelTableBody">
+                        <tr><td colspan="4" style="text-align:center;">Veri yükleniyor veya henüz veri yok...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // PWA'yı tarayıcıya kaydetme kodu (Service Worker Aktivasyonu)
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js'); }
+
+        // BURAYA 1. AŞAMADA GOOGLE'DAN ALDIĞINIZ WEB UYGULAMASI URL'SİNİ YAPIŞTIRIN
+        const GOOGLE_SCRIPT_URL = "BURAYA_GOOGLE_SCRIPT_LINKINIZI_YAPIŞTIRIN"; 
+
+        // 1. Şifre Kontrolü (Örnek şifre: 1234)
+        function loginKontrol() {
+            const girilenSifre = document.getElementById('sysPassword').value;
+            if(girilenSifre === "1234") {
+                document.getElementById('loginPage').style.display = "none";
+                document.getElementById('mainApp').style.display = "block";
+                buluttanVeriCek(); // Giriş yapınca verileri yükle
+            } else {
+                document.getElementById('loginError').style.display = "block";
+            }
         }
 
-        // Excel / Power Query mantığını simüle eden JavaScript fonksiyonu
+        // 2. Sayfa Değiştirme Mantığı
+        function switchPage(pageId, tabId) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active-tab'));
+            document.getElementById(pageId).classList.add('active');
+            document.getElementById(tabId).classList.add('active-tab');
+        }
+
+        // 3. Excel Hesaplama Mantığı
         function hesapla() {
             let miktar = parseFloat(document.getElementById('miktar').value) || 0;
             let fiyat = parseFloat(document.getElementById('fiyat').value) || 0;
-            
-            // Excel'deki =Miktar * Fiyat formülü
-            let toplam = miktar * fiyat; 
-            
-            // Şartlı filtreleme mantığı (Örn: 1000 TL üzeri kargo bedava veya ekstra vergi gibi)
-            if (toplam > 1000) {
-                toplam = toplam * 0.9; // %10 indirim uygula (Power Query Conditional Column gibi)
-                document.getElementById('toplam').innerText = toplam.toFixed(2) + " (%10 İndirim Uygulandı)";
-            } else {
-                document.getElementById('toplam').innerText = toplam.toFixed(2);
+            document.getElementById('toplam').innerText = (miktar * fiyat).toFixed(2);
+        }
+
+        // 4. Google Etabloya Veri Gönderme (PC ve Telefondan Ortak Kayıt)
+        function veriyiBulutaGonder() {
+            let miktar = document.getElementById('miktar').value;
+            let fiyat = document.getElementById('fiyat').value;
+            let toplam = document.getElementById('toplam').innerText;
+
+            if(GOOGLE_SCRIPT_URL === "BURAYA_GOOGLE_SCRIPT_LINKINIZI_YAPIŞTIRIN") {
+                alert("Lütfen önce Google Script linkinizi koda ekleyin!");
+                return;
             }
+
+            let veri = { action: "veriEkle", miktar: miktar, fiyat: fiyat, toplam: toplam };
+
+            fetch(GOOGLE_SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                cache: "no-cache",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(veri)
+            }).then(() => {
+                alert("Veri başarıyla ortak Excel tablosuna kaydedildi!");
+                buluttanVeriCek(); // Tabloyu tazele
+            }).catch(err => alert("Hata oluştu: " + err));
+        }
+
+        // 5. Google Etablodan Verileri Çekip Ekrana Listeleme
+        function buluttanVeriCek() {
+            if(GOOGLE_SCRIPT_URL === "BURAYA_GOOGLE_SCRIPT_LINKINIZI_YAPIŞTIRIN") return;
+
+            fetch(GOOGLE_SCRIPT_URL)
+            .then(res => res.json())
+            .then(data => {
+                let html = "";
+                data.forEach(satir => {
+                    html += `<tr>
+                        <td>${new Date(satir.tarih).toLocaleString('tr-TR')}</td>
+                        <td>${satir.miktar}</td>
+                        <td>${satir.fiyat} TL</td>
+                        <td>${satir.toplam} TL</td>
+                    </tr>`;
+                });
+                document.getElementById('excelTableBody').innerHTML = html;
+            });
         }
     </script>
 </body>
